@@ -1,0 +1,13 @@
+{
+  "name": "live-dash-server",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "express": "~3.4.8",
+    "lazy": "~1.0.11",
+    "request": "~2.34.0"
+  }
+}

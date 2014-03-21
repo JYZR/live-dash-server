@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MPD
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  id="69709493:1214854457:Hd1080I59X94"
+  profiles="urn:mpeg:dash:profile:isoff-live:2011 urn:com:dashif:dash264"
+  type="dynamic"
+  availabilityStartTime="2014-03-17T19:44:54.3928"
+  publishTime="2014-03-17T19:44:53.0823476"
+  minimumUpdatePeriod="PT3600S"
+  minBufferTime="PT15S"
+  timeShiftBufferDepth="PT60S"
+  suggestedPresentationDelay="PT30S"
+  maxSegmentDuration="PT1.000S"
+  xsi:schemaLocation="urn:mpeg:dash:schema:mpd:2011 DASH-MPD.xsd"
+  xmlns="urn:mpeg:dash:schema:mpd:2011">
+  <Period id="1" start="PT0S">
+    <AdaptationSet frameRate="30000/1001" mimeType="video/mp4" codecs="avc1.4D401E" startWithSAP="1" segmentAlignment="true">
+      <SegmentTemplate timescale="30000" duration="30030" startNumber="0" media="$Bandwidth$/$Number$.m4v" initialization="$Bandwidth$/0.m4s" />
+      <Representation width="666" height="374" id="v0" bandwidth="600000" />
+      <Representation width="1332" height="748" id="v1" bandwidth="2400000" />
+      <Representation width="1764" height="992" id="v2" bandwidth="4200000" />
+      <Representation width="1920" height="1080" id="v3" bandwidth="6000000" />
+    </AdaptationSet>
+    <AdaptationSet mimeType="audio/mp4" codecs="mp4a.40.2" startWithSAP="1" segmentAlignment="true">
+      <SegmentTemplate timescale="48000" duration="48048" startNumber="0" media="audio/$Number$.m4a" initialization="audio/0.m4s" />
+      <Representation id="a0" bandwidth="96000" />
+    </AdaptationSet>
+  </Period>
+</MPD>
