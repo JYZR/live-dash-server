@@ -6,16 +6,20 @@
   type="dynamic"
   availabilityStartTime="$AvailabilityStartTime$"
   publishTime="$PublishTime$"
-  maxSegmentDuration="PT4.080S"
-  minimumUpdatePeriod="PT3600S"
-  minBufferTime="PT5S"
-  timeShiftBufferDepth="PT0S"
-  suggestedPresentationDelay="PT10S"
+  maxSegmentDuration="PT$MaxSegmentDuration$S"
+  minimumUpdatePeriod="PT$MinimumUpdatePeriod$S"
+  minBufferTime="PT$MinBufferTime$S"
+  timeShiftBufferDepth="PT$TimeShiftBufferDepth$S"
+  suggestedPresentationDelay="PT$SuggestedPresentationDelay$S"
   xsi:schemaLocation="urn:mpeg:dash:schema:mpd:2011 DASH-MPD.xsd"
   xmlns="urn:mpeg:dash:schema:mpd:2011">
-  <Period start="$StartTime$">
+  <Period start="PT0S">
     <AdaptationSet maxFrameRate="25" maxHeight="720" maxWidth="1280" mimeType="video/mp4" par="16:9" segmentAlignment="true" startWithSAP="1">
-      <SegmentTemplate duration="360000" initialization="$RepresentationID$/Header.m4s" media="$RepresentationID$/$Number$.m4s" presentationTimeOffset="0" startNumber="0" timescale="90000"/>
+      <SegmentTemplate duration="360000" initialization="$RepresentationID$/Header.m4s" media="$RepresentationID$/$Time$.m4s" timescale="$VideoTimescale$">
+        <SegmentTimeline>
+          $VideoSegments$
+        </SegmentTimeline>
+      </SegmentTemplate>
       <Representation bandwidth="3000000" codecs="avc1.4D4020" frameRate="25" height="720" id="video1" sar="1:1" scanType="progressive" width="1280"/>
       <Representation bandwidth="2000000" codecs="avc1.4D401F" frameRate="25" height="576" id="video2" sar="1:1" scanType="progressive" width="1024"/>
       <Representation bandwidth="1000000" codecs="avc1.4D401E" frameRate="25" height="396" id="video3" sar="1:1" scanType="progressive" width="704"/>
@@ -23,7 +27,11 @@
       <Representation bandwidth="349952" codecs="avc1.4D400D" frameRate="25" height="180" id="video5" sar="1:1" scanType="progressive" width="320"/>
     </AdaptationSet>
     <AdaptationSet lang="en" mimeType="audio/mp4" segmentAlignment="true" startWithSAP="1">
-      <SegmentTemplate duration="192000" initialization="$RepresentationID$/Header.m4s" media="$RepresentationID$/$Number$.m4s" presentationTimeOffset="0" startNumber="0" timescale="48000"/>
+      <SegmentTemplate duration="192000" initialization="$RepresentationID$/Header.m4s" media="$RepresentationID$/$Time$.m4s" timescale="$AudioTimescale$">
+        <SegmentTimeline>
+          $AudioSegments$
+        </SegmentTimeline>
+      </SegmentTemplate>
       <Representation audioSamplingRate="48000" bandwidth="56000" codecs="mp4a.40.2" id="audio">
         <AudioChannelConfiguration schemeIdUri="urn:mpeg:dash:23003:3:audio_channel_configuration:2011" value="2"/>
       </Representation>
