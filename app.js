@@ -1,29 +1,47 @@
 // The App
-var express = require("express");
-var app = express();
+var express = require('express');
 var fs = require('fs');
-var lazy = require("lazy");
-// Simplified HTTP request which follows redirects by default
-var request = require('request');
 var http = require('http');
 var httpProxy = require('http-proxy');
 
-app.disable('etag');
+/*
+ * Configuration
+ */
+//  Detect if environment is Heroku
+var isHeroku = false;
+if (process.env.PORT !== undefined) {
+    isHeroku = true;
+}
+var proxyTarget;
+if (isHeroku) {
+    proxyTarget = 'http://lajv.s3-website-eu-west-1.amazonaws.com';
+} else {
+    proxyTarget = 'http://localhost:4000';
+}
+var manifestFilename = 'live-manifest.mpd';
 
 /*
  * Initialization
  */
-var availTime = new Date(new Date() - 60 * 1000); // 60 seconds ago
+var app = express();
+app.disable('etag');
+
 var proxy = httpProxy.createProxyServer({
-    target: 'http://localhost:8080'
+    target: proxyTarget
 });
+
+var availTime;
+var reset = function() {
+    availTime = new Date(new Date() - 60 * 1000); // 60 seconds ago
+};
+reset();
 
 /*
  * Constants
  */
 var segDur = 4; // In seconds
-var timeShiftBuffer = 20; // In seconds
-var suggestedPresentationDelay = 20; // In seconds
+var timeShiftBuffer = 10; // In seconds
+var suggestedPresentationDelay = 30; // In seconds
 var videoTimescale = 90000;
 var audioTimescale = 48000;
 
@@ -31,9 +49,8 @@ var audioTimescale = 48000;
  * Calculated values
  */
 var availableSegmentsTime = timeShiftBuffer + suggestedPresentationDelay;
-// var minBufferTime = availableSegmentsTime; // Buffer as much as possible
-// Uncomment following line if we're having problems
-var minBufferTime = suggestedPresentationDelay; // Normal buffering
+// Don't buffer more than what's available, we don't want 404s
+var minBufferTime = suggestedPresentationDelay / 2;
 var numAvailSegs = Math.ceil(availableSegmentsTime / segDur);
 var minUpdateTime = segDur;
 var videoSegDur = segDur * videoTimescale;
@@ -42,7 +59,7 @@ var audioSegDur = segDur * audioTimescale;
 /*
  * Manifest manipulations
  */
-var manifest = fs.readFileSync('live-manifest.mpd').toString();
+var manifest = fs.readFileSync(manifestFilename).toString();
 manifest = manifest.split("$AvailabilityStartTime$").join(availTime.toISOString());
 manifest = manifest.split("$MaxSegmentDuration$").join(segDur);
 manifest = manifest.split("$MinimumUpdatePeriod$").join(minUpdateTime);
@@ -51,24 +68,9 @@ manifest = manifest.split("$TimeShiftBufferDepth$").join(timeShiftBuffer);
 manifest = manifest.split("$SuggestedPresentationDelay$").join(suggestedPresentationDelay);
 manifest = manifest.split("$VideoTimescale$").join(videoTimescale);
 manifest = manifest.split("$AudioTimescale$").join(audioTimescale);
-// Add video segments
-var videoSegments = '<S t="$VideoStart$" d="360000" />\n';
-for (var i = 1; i < numAvailSegs; i++) {
-    videoSegments += '          <S d="360000" />\n';
-}
-manifest = manifest.split("$VideoSegments$").join(videoSegments);
-// Add audio segments
-var audioSegments = '<S t="$AudioStart$" d="192000" />\n';
-for (var i = 1; i < numAvailSegs; i++) {
-    audioSegments += '          <S d="192000" />\n';
-}
-manifest = manifest.split("$AudioSegments$").join(audioSegments);
-
+// manifest = manifest.split("$VideoPresentationTimeOffset$").join(-1 * suggestedPresentationDelay * videoTimescale);
+// manifest = manifest.split("$AudioPresentationTimeOffset$").join(-1 * suggestedPresentationDelay * audioTimescale);
 console.log("Manifest template generated:\n\n" + manifest + "\n\n");
-
-
-// Use static middleware
-// app.use(express.static(__dirname + '/static'));
 
 /*
  * Logging and setting of 'X-Response-Time' header
@@ -89,13 +91,23 @@ app.use(function(req, res, next) {
  */
 app.use(function(req, res, next) {
     res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
     next();
 });
 
-// Use the router middleware
-// app.use(app.router);
+/*
+ * Hack which closes the connection after a HEAD request.
+ * Needed since node does not seem to flush the written data otherwise
+ */
+app.use(function(req, res, next) {
+    if (req.method == 'HEAD')
+        res.shouldKeepAlive = false;
+    next();
+});
 
-
+/*
+ * Help functions
+ */
 var getCurrentInfo = function() {
     var info = {};
     info.now = new Date();
@@ -120,7 +132,10 @@ var getCurrentInfo = function() {
     return info;
 };
 
-app.get('/dash/live-envivio/live-manifest.mpd', function(req, res) {
+/*
+ * Manifest resource
+ */
+app.get('/envivio/manifest.mpd', function(req, res) {
     console.log("Manifest request from: " + req.connection.remoteAddress);
     res.setHeader('Content-Type', 'application/xml');
     var info = getCurrentInfo();
@@ -131,6 +146,18 @@ app.get('/dash/live-envivio/live-manifest.mpd', function(req, res) {
     );
 });
 
+/*
+ * Reset of Availability Time
+ */
+app.get('/envivio/reset', function(req, res) {
+    console.log("Availability time for manifest have been reset");
+    reset();
+    res.send(202);
+});
+
+/*
+ * Media file requests
+ */
 app.get('*', function(req, res) {
     console.log("Media request from " + req.connection.remoteAddress + " for " + req.path);
     var info = getCurrentInfo();
@@ -151,78 +178,41 @@ app.get('*', function(req, res) {
         return;
     }
 
-    var regexpTime = /\/(\d+)\./;
-    var time = req.path.match(regexpTime)[1];
+    var regexpNumber = /\/(\d+)\./;
+    if (req.path.match(regexpNumber)) {
+        res.setHeader('Cache-Control', 'no-cache, private, no-store, must-revalidate');
 
+        var number = req.path.match(regexpNumber)[1];
+        var seg = number; // / timescale / segDur;
+        console.log("Requested segment: " + seg);
 
-    var seg = time / timescale / segDur;
-    console.log("Segment: " + seg);
+        if (seg > info.last) {
+            console.log("Requesting a segment which is not yet available");
+            res.send(404, "Segment is not yet available");
+            console.log("Requst method: " + req.method);
+            return;
+        }
 
-    if (seg > info.last) {
-        console.log("Requesting a segment which is not yet available");
-        res.send(404, "Segment is not yet available");
-        return;
+        var moduloNumber = number % 64;
+
+        var urlParts = req.url.split(regexpNumber);
+        req.url = urlParts[0] + '/' + moduloNumber + '.' + urlParts[2];
+
+        var pathParts = req.path.split(regexpNumber);
+        req.path = pathParts[0] + '/' + moduloNumber + '.' + pathParts[2];
     }
 
+    console.log("Requested file: " + req.url);
+
     proxy.web(req, res, {
-        target: 'http://localhost:8080'
+        target: proxyTarget
     });
-    // res.setHeader('Content-Type', 'video/mp4');
-    // var re = /(.*\/)(\d+)(\.m4s)/;
-    // var parts = req.path.match(re);
-    // var path;
-    // // if (parts !== null)
-    // //     path = parts[1] + (parts[2] % 65) + parts[3];
-    // // else
-    // path = req.path;
-
-    // var aws_url = "http://lajv.s3-website-eu-west-1.amazonaws.com/envivio" + path;
-    // var local_url = "http://localhost:8080/dash/live-envivio" + path;
-    // console.log("Fetching " + local_url);
-    // var request = http.get(local_url, function(response) {
-    //     console.log("PROXY: " + response.statusCode + " " + path);
-    //     response.pipe(res);
-    // });
-    // // var options = {
-    // //     hostname: 'lajv.s3-website-eu-west-1.amazonaws.com',
-    // //     port: 80,
-    // //     path: '/envivio' + path,
-    // //     method: 'GET'
-    // // };
-    // // var request = http.request(options, function(response) {
-    // //     console.log('AWS status code: ' + response.statusCode);
-    // //     response.setEncoding('utf8');
-    // //     response.pipe(res);
-    // //     response.on('end', function() {
-    // //         res.send();
-    // //     });
-
-    // // });
-
-    // request.on('error', function(error) {
-    //     console.error(error);
-    //     res.send(500);
-    // });
-    // request.end();
 });
 
-// Create HTTP server with your app
-var http = require("http");
+/*
+ * Start server
+ */
 var server = http.createServer(app);
-var startDate = new Date();
-
-var dateToString = function(date) {
-    var yyyy = date.getFullYear();
-    var m = date.getMonth() + 1;
-    var mm = (m < 10 ? '0' + m : m);
-    var d = date.getDate();
-    var dd = (d < 10 ? '0' + d : d);
-    var time = date.toTimeString().substr(0, 8);
-    return yyyy + '-' + mm + '-' + dd + 'T' + time;
-};
-
-var publishTime = startDate.toISOString(); // dateToString(startDate);
-
-var port = 7000;
+var port = process.env.PORT || 7000;
 server.listen(port);
 console.log("Now listening on port " + port);
