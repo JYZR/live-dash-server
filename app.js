@@ -18,6 +18,7 @@ if (isHeroku) {
 } else {
     proxyTarget = 'http://localhost:4000';
 }
+console.log("Proxy target: " + proxyTarget);
 var manifestFilename = 'live-manifest.mpd';
 
 /*
