@@ -190,7 +190,11 @@ app.get('*', function(req, res) {
 
         if (seg > info.last) {
             console.log("Requesting a segment which is not yet available");
-            res.send(404, "Segment is not yet available");
+            if (req.method == 'HEAD') {
+                res.send(404, null);
+            } else {
+                res.send(404, "Segment is not yet available");
+            }
             console.log("Requst method: " + req.method);
             return;
         }
