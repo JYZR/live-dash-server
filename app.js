@@ -207,6 +207,7 @@ app.get('*', function(req, res) {
 
     if (req.method == 'HEAD') {
         res.send(200, null);
+        return;
     }
 
     proxy.web(req, res, {
