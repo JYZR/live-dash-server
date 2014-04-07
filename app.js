@@ -14,7 +14,8 @@ if (process.env.PORT !== undefined) {
 }
 var proxyTarget;
 if (isHeroku) {
-    proxyTarget = 'http://lajv.s3-website-eu-west-1.amazonaws.com';
+    var host = 'lajv.s3-website-eu-west-1.amazonaws.com';
+    proxyTarget = 'http://' + host;
 } else {
     proxyTarget = 'http://localhost:4000';
 }
@@ -208,6 +209,11 @@ app.get('*', function(req, res) {
     if (req.method == 'HEAD') {
         res.send(200, null);
         return;
+    }
+
+    if (host) {
+        req.headers.host = host;
+        req.host = host;
     }
 
     proxy.web(req, res, {
