@@ -205,6 +205,10 @@ app.get('*', function(req, res) {
 
     console.log("Requested file: " + req.url);
 
+    if (req.method == 'HEAD') {
+        res.send(200, null);
+    }
+
     proxy.web(req, res, {
         target: proxyTarget
     });
