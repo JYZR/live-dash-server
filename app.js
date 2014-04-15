@@ -43,7 +43,7 @@ reset();
  */
 var segDur = 4; // In seconds
 var timeShiftBuffer = 10; // In seconds
-var suggestedPresentationDelay = 30; // In seconds
+var suggestedPresentationDelay = 60; // In seconds
 var videoTimescale = 90000;
 var audioTimescale = 48000;
 
