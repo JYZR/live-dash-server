@@ -33,10 +33,10 @@ var proxy = httpProxy.createProxyServer({
 });
 
 var availTime;
-var reset = function() {
+var resetTime = function() {
     availTime = new Date(new Date() - 60 * 1000); // 60 seconds ago
 };
-reset();
+resetTime();
 
 /*
  * Constants
@@ -62,7 +62,6 @@ var audioSegDur = segDur * audioTimescale;
  * Manifest manipulations
  */
 var manifest = fs.readFileSync(manifestFilename).toString();
-manifest = manifest.split("$AvailabilityStartTime$").join(availTime.toISOString());
 manifest = manifest.split("$MaxSegmentDuration$").join(segDur);
 manifest = manifest.split("$MinimumUpdatePeriod$").join(minUpdateTime);
 manifest = manifest.split("$MinBufferTime$").join(minBufferTime);
@@ -142,6 +141,7 @@ app.get('/envivio/manifest.mpd', function(req, res) {
     res.setHeader('Content-Type', 'application/xml');
     var info = getCurrentInfo();
     res.send(manifest
+        .split("$AvailabilityStartTime$").join(availTime.toISOString())
         .split('$PublishTime$').join(info.now.toISOString())
         .split('$VideoStart$').join(info.videoOffset)
         .split('$AudioStart$').join(info.audioOffset)
@@ -153,7 +153,7 @@ app.get('/envivio/manifest.mpd', function(req, res) {
  */
 app.get('/envivio/reset', function(req, res) {
     console.log("Availability time for manifest have been reset");
-    reset();
+    resetTime();
     res.send(202);
 });
 
