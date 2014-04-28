@@ -2,6 +2,7 @@
 <MPD
   xmlns:xsd="http://www.w3.org/2001/XMLSchema"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns="urn:mpeg:dash:schema:mpd:2011"
   profiles="urn:mpeg:dash:profile:isoff-live:2011 urn:com:dashif:dash264"
   type="dynamic"
   availabilityStartTime="$AvailabilityStartTime$"
@@ -9,8 +10,7 @@
   maxSegmentDuration="PT$MaxSegmentDuration$S"
   minBufferTime="PT$MinBufferTime$S"
   suggestedPresentationDelay="PT$SuggestedPresentationDelay$S"
-  xsi:schemaLocation="urn:mpeg:dash:schema:mpd:2011 DASH-MPD.xsd"
-  xmlns="urn:mpeg:dash:schema:mpd:2011">
+  xsi:schemaLocation="urn:mpeg:dash:schema:mpd:2011 DASH-MPD.xsd">
   <Period start="PT0S">
     <AdaptationSet maxFrameRate="25" maxHeight="720" maxWidth="1280" mimeType="video/mp4" par="16:9" segmentAlignment="true" startWithSAP="1">
       <SegmentTemplate duration="360000" initialization="$RepresentationID$/Header.m4s" media="$RepresentationID$/$Number$.m4s" timescale="$VideoTimescale$" startNumber="0" />

@@ -14,13 +14,13 @@ if (process.env.PORT !== undefined) {
 }
 var proxyTarget;
 if (isHeroku) {
-    var host = 'lajv.s3-website-eu-west-1.amazonaws.com';
+    var host = '188.226.220.231:8080';
     proxyTarget = 'http://' + host;
 } else {
-    proxyTarget = 'http://localhost:4000';
+    proxyTarget = 'http://188.226.220.231:8080';
 }
 console.log("Proxy target: " + proxyTarget);
-var manifestFilename = 'live-manifest.mpd';
+var manifestFilename = 'dashcast.mpd';
 
 /*
  * Initialization
@@ -41,10 +41,10 @@ resetTime();
 /*
  * Constants
  */
-var segDur = 4; // In seconds
+var segDur = 1; // In seconds
 var timeShiftBuffer = 10; // In seconds
 var suggestedPresentationDelay = 60; // In seconds
-var videoTimescale = 90000;
+var videoTimescale = 360000;
 var audioTimescale = 48000;
 
 /*
@@ -136,7 +136,7 @@ var getCurrentInfo = function() {
 /*
  * Manifest resource
  */
-app.get('/envivio/manifest.mpd', function(req, res) {
+app.get('/manifest.mpd', function(req, res) {
     console.log("Manifest request from: " + req.connection.remoteAddress);
     res.setHeader('Content-Type', 'application/xml');
     var info = getCurrentInfo();
@@ -151,7 +151,7 @@ app.get('/envivio/manifest.mpd', function(req, res) {
 /*
  * Reset of Availability Time
  */
-app.get('/envivio/reset', function(req, res) {
+app.get('/reset', function(req, res) {
     console.log("Availability time for manifest have been reset");
     resetTime();
     res.send(202);
@@ -180,7 +180,7 @@ app.get('*', function(req, res) {
         return;
     }
 
-    var regexpNumber = /\/(\d+)\./;
+    var regexpNumber = /\/\w{5}\d_(\d+)_gpac\./;
     if (req.path.match(regexpNumber)) {
         res.setHeader('Cache-Control', 'no-cache, private, no-store, must-revalidate');
 
@@ -199,13 +199,13 @@ app.get('*', function(req, res) {
             return;
         }
 
-        var moduloNumber = number % 64;
+        // var moduloNumber = number % 64;
 
-        var urlParts = req.url.split(regexpNumber);
-        req.url = urlParts[0] + '/' + moduloNumber + '.' + urlParts[2];
+        // var urlParts = req.url.split(regexpNumber);
+        // req.url = urlParts[0] + '/' + moduloNumber + '.' + urlParts[2];
 
-        var pathParts = req.path.split(regexpNumber);
-        req.path = pathParts[0] + '/' + moduloNumber + '.' + pathParts[2];
+        // var pathParts = req.path.split(regexpNumber);
+        // req.path = pathParts[0] + '/' + moduloNumber + '.' + pathParts[2];
     }
 
     console.log("Requested file: " + req.url);
