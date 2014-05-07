@@ -36,6 +36,7 @@ var availTime;
 var resetTime = function() {
     availTime = new Date(new Date() - 60 * 1000); // 60 seconds ago
 };
+setInterval(resetTime, (1 * 3600 + 50 * 60 + 20) * 1000);
 resetTime();
 
 /*
